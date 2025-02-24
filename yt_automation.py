@@ -35,7 +35,11 @@ request.default_range_size = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb
 # 1037804191460-qvlskh7r3t1umvk9sij76gmmf55qh3bk.apps.googleusercontent.com
 # Set up OAuth 2.0 credentials
 CLIENT_SECRETS_FILE = "./client-secret/client_secret_googleusercontent.json"  # Download this from Google Cloud Console
-SCOPES = ["https://www.googleapis.com/auth/youtube.readonly"]
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/youtube.download"
+]
 API_SERVICE_NAME = "youtube"
 API_VERSION = "v3"
 DOWNLOAD_DIR = "./downloaded_videos"
@@ -120,6 +124,25 @@ def authenticate():
             pickle.dump(creds, token)
     return creds
 
+def get_youtube_oauth_credentials():
+    creds = None
+    # The file token.json stores the user's access and refresh tokens
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    
+    # If there are no (valid) credentials available, let the user log in
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
+            creds = flow.run_local_server(port=0)
+        
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+    
+    return creds
 
 def get_openai_api_key() -> str:
     if os.path.exists("./client-secret/openai-api-key.json"):
@@ -159,16 +182,18 @@ def download_video(video_id, video_title):
 
         video_url = f"https://www.youtube.com/watch?v={video_id}"
         
-        # Use certifi for SSL verification
+        # Get OAuth credentials
+        creds = get_youtube_oauth_credentials()
+        
+        # Initialize YouTube with OAuth
         yt = YouTube(
             video_url,
             use_oauth=True,
             allow_oauth_cache=True
         )
         
-        # Set SSL context with certifi
-        ctx = ssl.create_default_context(cafile=certifi.where())
-        yt.http = ctx
+        # Configure the YouTube object with credentials
+        yt.oauth = creds
         
         stream = yt.streams.filter(progressive=True, file_extension="mp4").order_by('resolution').desc().first()
         if stream:
