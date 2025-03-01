@@ -4,7 +4,10 @@ client-secret/client_secret_googleusercontent.json
 /downloaded_videos
 client-secret/openai-api-key.json
 
+stash/*
 stash/yt_search.py-stash
 stash/yt-upload.py-stash
 stash/yt_automation - Copy.py
-.DS_Store
+stash/yt_search.py
+.vscode/*
+.gitignore
