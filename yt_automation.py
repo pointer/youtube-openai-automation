@@ -41,10 +41,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.force-ssl",
     "https://www.googleapis.com/auth/youtube.download"
 ]
-API_SERVICE_NAME = "youtube"
-API_VERSION = "v3"
-DOWNLOAD_DIR = "./downloaded_videos"
-
 
 
 # Explicitly tell the underlying HTTP transport library not to retry, since
@@ -72,7 +68,7 @@ YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 OPENAI_API_KEY = ""
-
+DOWNLOAD_DIR = "./downloaded_videos"
 # This variable defines a message to display if the CLIENT_SECRETS_FILE is
 # missing.
 MISSING_CLIENT_SECRETS_MESSAGE = """
@@ -97,23 +93,6 @@ VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
 # Set a custom User-Agent header
 request.default_range_size = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
-
-# Set a custom User-Agent header
-# request.default_headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-# 1037804191460-qvlskh7r3t1umvk9sij76gmmf55qh3bk.apps.googleusercontent.com
-# Set up OAuth 2.0 credentials
-CLIENT_SECRETS_FILE = "./client-secret/client_secret_googleusercontent.json"  # Download this from Google Cloud Console
-SCOPES = [
-    "https://www.googleapis.com/auth/youtube.readonly",
-    "https://www.googleapis.com/auth/youtube.force-ssl",
-    "https://www.googleapis.com/auth/youtube.download"
-]
-API_SERVICE_NAME = "youtube"
-API_VERSION = "v3"
-DOWNLOAD_DIR = "./downloaded_videos"
-
-
-
 # Explicitly tell the underlying HTTP transport library not to retry, since
 # we are handling retry logic ourselves.
 httplib2.RETRIES = 1
@@ -132,13 +111,6 @@ RETRIABLE_EXCEPTIONS = (httplib2.HttpLib2Error, IOError, httplib.NotConnected,
 # Always retry when an apiclient.errors.HttpError with one of these status
 # codes is raised.
 RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
-
-# This OAuth 2.0 access scope allows an application to upload files to the
-# authenticated user's YouTube channel, but doesn't allow other types of access.
-YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
-YOUTUBE_API_SERVICE_NAME = "youtube"
-YOUTUBE_API_VERSION = "v3"
-OPENAI_API_KEY = ""
 
 # This variable defines a message to display if the CLIENT_SECRETS_FILE is
 # missing.
@@ -302,7 +274,7 @@ def resumable_upload(insert_request):
       time.sleep(sleep_seconds)
 
 def upload_video(file_path, body=dict()):
-    youtube = build(API_SERVICE_NAME, API_VERSION, credentials=authenticate())
+    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, credentials=authenticate())
     try:
         initialize_upload(youtube, file_path, body)
     except HttpError as e:
@@ -335,7 +307,7 @@ def download_video(video_id, video_title):
         print(f"Error downloading {video_title}: {e}\n")
 
 def search_videos(query): #, max_results=5):
-    youtube = build(API_SERVICE_NAME, API_VERSION, credentials=authenticate())
+    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, credentials=authenticate())
     request = youtube.search().list(
         q=query,
         part="snippet",
@@ -352,48 +324,10 @@ def search_videos(query): #, max_results=5):
         sleep_seconds = random.random() * 10
 #       print(f'Sleeping {sleep_seconds} seconds and then retrying...')
         time.sleep(sleep_seconds)
-        # channel_title = item["snippet"]["channelTitle"]
-        # published_at = item["snippet"]["publishedAt"]
-        # description = item["snippet"]["description"]
+
         filename = re.sub(r"[^\w\s]", "", video_title).replace(" ", "-").lower() + ".mp4"
         file_path = f"{DOWNLOAD_DIR}/{filename}"
-        # body=dict(
-        #   kind='youtube#video',
-        #   etag=item["etag"],
-        #   id=dict(
-        #     kind=item["id"]["kind"],
-        #     videoId=item["id"]["videoId"]
-        #   ),
-        #   snippet=dict(
-        #     title=video_title,
-        #     description=item["snippet"]["description"],
-        #     tags="#vanity #makeup #make-up #beauty #cosmetics  #cosmétiques #skincare #soins #haircare  #cheveux  #nails  #ongles  #manucure  #pedicure  #pédicure  #nailart  #nailpolish  #vernis",
-        #     categoryId=12,
-        #     thumbnails=dict(
-        #         default=dict(
-        #             url=item["snippet"]["thumbnails"]["default"]["url"],
-        #             width=item["snippet"]["thumbnails"]["default"]["width"],
-        #             height=item["snippet"]["thumbnails"]["default"]["height"]
-        #         ),
-        #         medium=dict(
-        #             url=item["snippet"]["thumbnails"]["medium"]["url"],
-        #             width=item["snippet"]["thumbnails"]["medium"]["width"],
-        #             height=item["snippet"]["thumbnails"]["medium"]["height"]
-        #         ),
-        #         high=dict(
-        #             url=item["snippet"]["thumbnails"]["high"]["url"],
-        #             width=item["snippet"]["thumbnails"]["high"]["width"],
-        #             height=item["snippet"]["thumbnails"]["high"]["height"]
-        #         )
-        #     ),
-        #     channelTitle=item["snippet"]["channelTitle"],
-        #     liveBroadcastContent="none",	
-        #     publishTime=item["snippet"]["publishedAt"]
-        #   ),
-        #   status=dict(
-        #     privacyStatus="public"
-        #   )
-        # )     
+  
         body = {
             "snippet": {
                 "title": video_title,
@@ -416,7 +350,7 @@ def generate_video_metadata(topics):
         messages=[
             {
                 "role": "system", 
-                "content": "You are a video content specialist. Provide only valid JSON responses. Keep descriptions under 50 words."
+                "content": "You are a video content specialist. Provide only valid JSON responses. Keep descriptions under 50 words. Select video in French."
             },
             {
                 "role": "user",
