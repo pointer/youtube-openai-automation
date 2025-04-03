@@ -1,4 +1,5 @@
 import os
+import os.path
 import random
 import sys
 import time
@@ -8,8 +9,8 @@ import argparse
 import icecream as ic
 from typing import List
 # import rich
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
+import traceback
+
 from openai import OpenAI
 import re
 import httplib2
@@ -17,7 +18,12 @@ import requests
 import json
 import ssl
 import certifi
+import pathlib
 
+# from apiclient import discovery
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
@@ -25,7 +31,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from pytubefix import YouTube
 from pytube import request
-
+# from sheetfu import Table, SpreadsheetApp
+from google.oauth2 import service_account
+import pygsheets
+import numpy as np
+from pygsheets import Spreadsheet
+from pygsheets import Worksheet
+from pygsheets import Cell
 
 # Set a custom User-Agent header
 request.default_range_size = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -35,11 +47,17 @@ request.default_range_size = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb
 # request.default_headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 # 1037804191460-qvlskh7r3t1umvk9sij76gmmf55qh3bk.apps.googleusercontent.com
 # Set up OAuth 2.0 credentials
-CLIENT_SECRETS_FILE = "./client-secret/client_secret_googleusercontent.json"  # Download this from Google Cloud Console
+# CLIENT_SECRETS_FILE = "./client-secret/client_secret_googleusercontent.json"  # Download this from Google Cloud Console
+CLIENT_SECRETS_FILE = "./mirabelle-project-6c703ae64cb7.json"
+# "./client-secret/client_secret_1037804191460-qvlskh7r3t1umvk9sij76gmmf55qh3bk.apps.googleusercontent.com"
+# CLIENT_SECRETS_FILE = "client-secret/client_secret_1037804191460-qvlskh7r3t1umvk9sij76gmmf55qh3bk.apps.googleusercontent.com copy.json"
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.readonly",
     "https://www.googleapis.com/auth/youtube.force-ssl",
-    "https://www.googleapis.com/auth/youtube.download"
+    "https://www.googleapis.com/auth/youtube.download",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+    
 ]
 
 
@@ -251,7 +269,7 @@ def resumable_upload(insert_request):
       status, response = insert_request.next_chunk()
       if response is not None:
         if 'id' in response:
-          print(f'Video id {response['id']} was successfully uploaded.')	
+          print(f'Video id {response["id"]} was successfully uploaded.')	
         else:
           exit("The upload failed with an unexpected response: %s" % response)
     except HttpError as e:
@@ -273,7 +291,7 @@ def resumable_upload(insert_request):
       print(f'Sleeping {sleep_seconds} seconds and then retrying...')
       time.sleep(sleep_seconds)
 
-def upload_video(file_path, body=dict()):
+def upload_video(file_path, body=dict()) -> bool:
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, credentials=authenticate())
     try:
         initialize_upload(youtube, file_path, body)
@@ -283,6 +301,7 @@ def upload_video(file_path, body=dict()):
         print(f"An error occurred: {e}")
     finally:
         print("Upload complete")
+    return True
  
 def download_video(video_id, video_title):
     try:
@@ -298,9 +317,12 @@ def download_video(video_id, video_title):
         stream = yt.streams.filter(progressive=True, file_extension="mp4").first()  # Get the highest resolution progressive stream
         if stream:
             print(f"Downloading: {video_title}...")
-            filename = re.sub(r"[^\w\s]", "", video_title).replace(" ", "-").lower() + ".mp4"
-            stream.download(output_path=DOWNLOAD_DIR, filename=filename)
-            print(f"Download complete: {video_title}\n")
+            file_name = re.sub(r"[^\w\s]", "", video_title).replace(" ", "-").lower() + ".mp4"
+            # file_path = os.path.join(DOWNLOAD_DIR, filename)
+            file_path = pathlib.Path(DOWNLOAD_DIR) / file_name
+            if not file_path.exists():
+                stream.download(output_path=DOWNLOAD_DIR, filename=file_name)
+                print(f"Download complete: {video_title}\n")
         else:
             print(f"No downloadable stream found for: {video_title}\n")
     except Exception as e:
@@ -308,37 +330,37 @@ def download_video(video_id, video_title):
 
 def search_videos(query): #, max_results=5):
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, credentials=authenticate())
-    request = youtube.search().list(
-        q=query,
-        part="snippet",
-        publishedBefore="2024-01-01T00:00:00Z",
-        maxResults=1, #max_results,
-        type="video"
-    )
-    response = request.execute()
-    # ic(response)
-    for item in response["items"]:
-        video_title = item["snippet"]["title"]
-        video_id = item["id"]["videoId"]
-        download_video(video_id, video_title)
-        sleep_seconds = random.random() * 10
+    # request = youtube.search().list(
+    #     q=query,
+    #     part="snippet",
+    #     publishedBefore="2024-01-01T00:00:00Z",
+    #     maxResults=1, #max_results,
+    #     type="video"
+    # )
+    # response = request.execute()
+    # # ic(response)
+    # for item in response["items"]:
+    #     video_title = item["snippet"]["title"]
+    #     video_id = item["id"]["videoId"]
+    #     download_video(video_id, video_title)
+    #     sleep_seconds = random.random() * 10
 #       print(f'Sleeping {sleep_seconds} seconds and then retrying...')
-        time.sleep(sleep_seconds)
+        # time.sleep(sleep_seconds)
 
-        filename = re.sub(r"[^\w\s]", "", video_title).replace(" ", "-").lower() + ".mp4"
-        file_path = f"{DOWNLOAD_DIR}/{filename}"
+        # filename = re.sub(r"[^\w\s]", "", video_title).replace(" ", "-").lower() + ".mp4"
+        # file_path = f"{DOWNLOAD_DIR}/{filename}"
   
-        body = {
-            "snippet": {
-                "title": video_title,
-                "description": item["snippet"]["description"],
-                "tags": ["makeup tutorial", "beauty tips", "cosmetics", "makeup basics", "beauty tutorial"],
-            },
-            "status": {
-                "privacyStatus": "public"  # Can be "private", "public", or "unlisted"
-            }
-        }           
-        upload_video(file_path, body)
+        # body = {
+        #     "snippet": {
+        #         "title": video_title,
+        #         "description": item["snippet"]["description"],
+        #         "tags": ["makeup tutorial", "beauty tips", "cosmetics", "makeup basics", "beauty tutorial"],
+        #     },
+        #     "status": {
+        #         "privacyStatus": "public"  # Can be "private", "public", or "unlisted"
+        #     }
+        # }           
+        # upload_video(file_path, body)
        
 def generate_video_metadata(topics):
     api_key_ = get_openai_api_key()  
@@ -402,6 +424,91 @@ def generate_video_metadata(topics):
     else:
         raise ValueError("Received None content from OpenAI API")
 
+
+def get_spreadsheet_data():
+    try:
+        # Load service account credentials
+        # SERVICE_ACCOUNT_FILE = CLIENT_SECRETS_FILE  # Create this file
+        # SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+        # SCOPES = ('https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive')
+        # service_account_info = json.loads(secret)
+        # my_credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes=SCOPES)       
+        # credentials = service_account.Credentials.from_service_account_file(
+        #     CLIENT_SECRETS_FILE, 
+        #     scopes=SCOPES
+        # )
+        # gc = pygsheets.authorize(service_file=CLIENT_SECRETS_FILE, scopes=SCOPES)
+
+        # key_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        gc = pygsheets.authorize(filename="./client_secret.json")
+
+        # with open('./client-secret/config.json', 'r') as config_file:
+        #     config = json.load(config_file)
+        #     url = config.get('url')
+
+        # if not url:
+        #     raise ValueError("URL not found in config.json")
+
+        # sa = SpreadsheetApp(credentials)  # Pass service account credentials
+        # spreadsheet = sa.open_by_url(url)
+        # sheet1 = spreadsheet.get_sheet_by_name('Youtube')
+        # data_range = sheet1.get_data_range()
+        # table = Table(data_range, backgrounds=True)
+        sh = gc.open('Youtube')
+        wks = sh.sheet1
+        rng = wks.get_values('A1', 'D31', returnas='range')
+        wks.unlink()
+        print(rng)
+        # table = Table(rng, backgrounds=True)
+        
+        # for item in table:
+        #     title = item.get_field_value('title')
+        #     description = item.get_field_value('description')
+        #     channel = item.get_field_value('channel')                
+        #     url = item.get_field_value('url')        
+        #     print(f"Title: {title}")
+        #     print(f"Description: {description}")
+        #     print(f"Channel: {channel}")
+        #     print(f"URL: {url}")
+        #     print("-" * 80)
+            
+    # except Exception as e:
+    #     exc_type, exc_obj, exc_tb = sys.exc_info()
+    #     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1] if exc_tb else "Unknown"
+    #     if exc_tb:
+    #         print(exc_type, fname, exc_tb.tb_lineno)
+    #     else:
+    #         print(exc_type, fname, "No traceback available")
+    except:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        traceback_details = {
+                            'filename': exc_traceback.tb_frame.f_code.co_filename if exc_traceback else "Unknown",
+                            'lineno'  : exc_traceback.tb_lineno if exc_traceback else "Unknown",
+                            'name'    : exc_traceback.tb_frame.f_code.co_name if exc_traceback else "Unknown",
+                            'type'    : exc_type.__name__ if exc_type else "Unknown",
+                            'message' : str(exc_value),
+                            }
+
+        del(exc_type, exc_value, exc_traceback)
+        # print(exc_type)
+        # print(exc_value)
+        # print( exc_traceback)        
+        # print()
+        print( traceback.format_exc())
+        print()
+        traceback_template = """
+        Traceback (most recent call last):
+          File "%(filename)s", line %(lineno)s, in %(name)s
+        %(type)s: %(message)s
+        """
+        print(traceback_template % traceback_details)
+        # print(exc_type)
+        # print(exc_value)
+        # print( exc_traceback)        
+        # print()
+        print()           
+    
 if __name__ == "__main__":
     # Define your topics
     beauty_topics = [
@@ -414,16 +521,16 @@ if __name__ == "__main__":
     
     try:
         # Generate video ideas and metadata
-        video_metadata = generate_video_metadata(beauty_topics)
-        
+        # video_metadata = generate_video_metadata(beauty_topics)
+        get_spreadsheet_data()
         # # Print the results in a formatted way
-        for video in video_metadata["videos"]:
-        #     print("\nVideo Idea:")
-        #     print(f"Title: {video['title']}")
-        #     print(f"Filename: {video['filename']}")
-        #     print(f"Description: {video['description']}")
-        #     print(f"Tags: {', '.join(video['tags'])}")
-            print("-" * 80)
+        # for video in video_metadata["videos"]:
+        # #     print("\nVideo Idea:")
+        # #     print(f"Title: {video['title']}")
+        # #     print(f"Filename: {video['filename']}")
+        # #     print(f"Description: {video['description']}")
+        # #     print(f"Tags: {', '.join(video['tags'])}")
+        #     print("-" * 80)
             
     except Exception as e:
         print(f"Error: {str(e)}")

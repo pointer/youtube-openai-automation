@@ -1,35 +1,11 @@
 token.pickle
-client-secret/client_secret_1037804191460-qvlskh7r3t1umvk9sij76gmmf55qh3bk.apps.googleusercontent.com.json
-client-secret/client_secret_googleusercontent.json
-/downloaded_videos
-client-secret/openai-api-key.json
-
+/downloaded_videos/*
+client-secret/*
 stash/*
-stash/yt_search.py-stash
-stash/yt-upload.py-stash
-stash/yt_automation - Copy.py
-stash/yt_search.py
 .vscode/*
 .gitignore
-downloaded_videos-0/5-athome-skincare-tips-to-really-improve-your-skin--my-best-skin-ever.mp4
-downloaded_videos-0/100-authentic-hack-for-smooth-hair-smoothhair-haircare-relatable-fashion.mp4
-downloaded_videos-0/Beginners Smokey Eye Makeup Tutorial  Parts of the Eye  How To Apply Eyeshadow.mp4
-downloaded_videos-0/best-makeup-under-15--shorts-makeup-beauty-drugstoremakeup.mp4
-downloaded_videos-0/dans-quel-ordre-appliquer-les-produits-de-ta-skincare-routine-.mp4
-downloaded_videos-0/diy-butterfly-hair-cut--layer-hair-cut-at-home.mp4
-downloaded_videos-0/easiest-4-step-skincare-routine-for-men-skincare.mp4
-downloaded_videos-0/effortless-beauty-mastering-the-10minute-everyday-makeup-routine.mp4
-downloaded_videos-0/how-to-build-a-skin-care-routine-like-a-dermatologist--step-by-step.mp4
-downloaded_videos-0/maquillage-pas-à-pas-spécial-débutants-10-étapes-détaillées - Copy.mp4
-downloaded_videos-0/maquillage-pas-à-pas-spécial-débutants-10-étapes-détaillées_13.59.51.mp4
-downloaded_videos-0/maquillage-pas-à-pas-spécial-débutants-10-étapes-détaillées.mp4
-downloaded_videos-0/Mastering the Flawless Base One Step Guide to Effortless Makeup for Beginners.mp4
-downloaded_videos-0/mastering-the-art-of-makeup--a-step-by-step-tutorial.mp4
-downloaded_videos-0/mastering-the-flawless-base-one-step-guide-to-effortless-makeup-for-beginners.mp4
-downloaded_videos-0/my-evidencebased-skincare-routine.mp4
-downloaded_videos-0/quick-amp-easy-5-minute-makeup-tutorial.mp4
-downloaded_videos-0/quick-and-chic-diy-hair-bun-tutorial--summer-hairstyles.mp4
-downloaded_videos-0/Quick-Makeup-for-beginners.mp4
-downloaded_videos-0/super-quick-wavy-hair-routine-upright-styling.mp4
-downloaded_videos-0/the-gq-guide-to-creating-the-perfect-hair-care-routine--amazon-beauty--british-gq.mp4
-downloaded_videos-0/ultimate-skincare-routine-for-glass-skin.mp4
+downloaded_videos/*
+downloaded_videos-0/*
+__token.pickle.old
+.gitignore
+client_secret.json
